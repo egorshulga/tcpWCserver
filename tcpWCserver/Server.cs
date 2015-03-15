@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace tcpWCserver
 {
@@ -13,14 +11,22 @@ namespace tcpWCserver
 	{
 		private const int serverPort = 41414;
 		private static readonly TcpListener serverListener = new TcpListener(IPAddress.Any, serverPort);
-		private static TcpClient server;
 
 
 		static public void Start()
 		{
 			InitializeServer();
 
-			Listening();
+			try
+			{
+				Listening();
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+				serverListener.Stop();
+			}
+
 
 		}
 
@@ -43,15 +49,98 @@ namespace tcpWCserver
 				}
 				else
 				{
-					server = serverListener.AcceptTcpClient();
+					ProcessPendingConnection();
+					Console.WriteLine("Server: waiting for connections...");
 				}
 			}
 		}
 
 
-		static private void 
+		private static void ProcessPendingConnection()
+		{
+			try
+			{
+				TcpClient server = serverListener.AcceptTcpClient();
+				Console.WriteLine("Server: client {0} has connected to {1} just now.", (IPEndPoint)server.Client.RemoteEndPoint, (IPEndPoint)server.Client.LocalEndPoint);
+
+				Thread processing = new Thread(TextReceivingAndWordsCounting);
+
+				processing.Start();
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+			}
+		}
 
 
+		private static void TextReceivingAndWordsCounting(object obj)
+		{
+			TcpClient server = (TcpClient) obj;
+			try
+			{
+				string text = ReceiveText(server);
+
+				int wordsCount = CountWords(text);
+
+				SendWordsCount(server, wordsCount);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+			}
+		}
+
+
+		private static string ReceiveText(TcpClient server)
+		{
+			List<byte> receivingBuffer = new List<byte>();
+			NetworkStream receivingStream = server.GetStream();
+
+			while (receivingStream.DataAvailable)
+			{
+				receivingBuffer.Add((byte)receivingStream.ReadByte());
+			}
+			
+			string text = Encoding.Unicode.GetString(receivingBuffer.ToArray());
+			PrintClientsText(text);
+			return text;
+		}
+
+
+		static private void PrintClientsText(string text)
+		{
+			Console.WriteLine("Server: received text:");
+			Console.WriteLine(text);
+		}
+
+
+		static private int CountWords(string text)
+		{
+			int wordsCount = text.Split(' ').Length;
+			Console.WriteLine("Server: {0} words in text.", wordsCount);
+			return wordsCount;
+		}
+
+
+		static private void SendWordsCount(TcpClient server, int wordsCount)
+		{
+			byte[] sendingbuffer = ConvertIntToByteArray(wordsCount);
+			NetworkStream sendingStream = server.GetStream();
+
+			sendingStream.Write(sendingbuffer, 0, sendingbuffer.Length);
+		}
+
+
+		static private byte[] ConvertIntToByteArray(int intValue)
+		{
+			byte[] array = BitConverter.GetBytes(intValue);
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(array);
+			}
+			return array;
+		}
 
 	}
 }
