@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace tcpWCserver
@@ -24,10 +25,11 @@ namespace tcpWCserver
 			catch (Exception e)
 			{
 				Console.WriteLine(e.Message);
+			}
+			finally 
+			{
 				serverListener.Stop();
 			}
-
-
 		}
 
 
@@ -50,6 +52,7 @@ namespace tcpWCserver
 				else
 				{
 					ProcessPendingConnection();
+					Thread.Sleep(sleepingTime / 10);
 					Console.WriteLine("Server: waiting for connections...");
 				}
 			}
@@ -61,11 +64,12 @@ namespace tcpWCserver
 			try
 			{
 				TcpClient server = serverListener.AcceptTcpClient();
-				Console.WriteLine("Server: client {0} has connected to {1} just now.", (IPEndPoint)server.Client.RemoteEndPoint, (IPEndPoint)server.Client.LocalEndPoint);
+//				Console.WriteLine("Server: client {0} has connected to {1} just now.", (IPEndPoint)server.Client.RemoteEndPoint, (IPEndPoint)server.Client.LocalEndPoint);
+				Console.WriteLine("Server: client {0} has connected just now.", (IPEndPoint)server.Client.RemoteEndPoint);
 
 				Thread processing = new Thread(TextReceivingAndWordsCounting);
 
-				processing.Start();
+				processing.Start(server);
 			}
 			catch (Exception e)
 			{
@@ -81,7 +85,7 @@ namespace tcpWCserver
 			{
 				string text = ReceiveText(server);
 
-				int wordsCount = CountWords(text);
+				int wordsCount = CountWordsByRegex(text);
 
 				SendWordsCount(server, wordsCount);
 			}
@@ -110,15 +114,24 @@ namespace tcpWCserver
 
 		static private void PrintClientsText(string text)
 		{
-			Console.WriteLine("Server: received text:");
-			Console.WriteLine(text);
+			Console.WriteLine("Server: received text:\n");
+			Console.WriteLine(text + "\n");
 		}
 
 
 		static private int CountWords(string text)
 		{
 			int wordsCount = text.Split(' ').Length;
-			Console.WriteLine("Server: {0} words in text.", wordsCount);
+			Console.WriteLine("Server: {0} words in text.\n", wordsCount);
+			return wordsCount;
+		}
+		
+
+		static private int CountWordsByRegex(string text)
+		{
+			Regex word = new Regex(@"\w+");
+			int wordsCount = word.Matches(text).Count;
+			Console.WriteLine("Server: {0} words in text.\n", wordsCount);
 			return wordsCount;
 		}
 
