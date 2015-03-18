@@ -114,15 +114,15 @@ namespace tcpWCserver
 
 		static private void PrintClientsText(string text)
 		{
-			Console.WriteLine("Server: received text:\n");
-			Console.WriteLine(text + "\n");
+			Console.WriteLine("Server: received text:");
+			Console.WriteLine(text);
 		}
 
 
 		static private int CountWords(string text)
 		{
 			int wordsCount = text.Split(' ').Length;
-			Console.WriteLine("Server: {0} words in text.\n", wordsCount);
+			Console.WriteLine("Server: {0} words in text.", wordsCount);
 			return wordsCount;
 		}
 		
@@ -131,7 +131,7 @@ namespace tcpWCserver
 		{
 			Regex word = new Regex(@"\w+");
 			int wordsCount = word.Matches(text).Count;
-			Console.WriteLine("Server: {0} words in text.\n", wordsCount);
+			Console.WriteLine("Server: {0} words in text.", wordsCount);
 			return wordsCount;
 		}
 
